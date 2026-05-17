@@ -2,7 +2,13 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
-const serviceAccount = require('./serviceAccountKey.json');
+
+let serviceAccount;
+if (process.env.SERVICE_ACCOUNT_JSON) {
+  serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_JSON);
+} else {
+  serviceAccount = require('./serviceAccountKey.json');
+}
 
 admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 
@@ -35,4 +41,14 @@ app.post('/notify', async (req, res) => {
   }
 });
 
-app.listen(3000, () => console.log('🚀 Server running on port 3000'));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  if (process.env.RENDER_EXTERNAL_URL) {
+    setInterval(() => {
+      fetch(process.env.RENDER_EXTERNAL_URL)
+        .then(() => console.log('Keep-alive ping sent'))
+        .catch(err => console.warn('Keep-alive failed:', err.message));
+    }, 10 * 60 * 1000);
+  }
+});
